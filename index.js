@@ -10,7 +10,7 @@ const port = process.env.PORT || 5000
 // middleware 
 
 app.use(cors({
-    origin: ['http://localhost:5174'],
+    origin: ['http://localhost:5174', 'http://localhost:5173'],
     credentials: true
 
 
@@ -41,7 +41,7 @@ const client = new MongoClient(uri, {
 //  create middleware logger 
 
 const logger = async (req, res, next) => {
-    console.log('called:', req.host, req.originalUrl)
+    console.log('log:info', req.host, req.originalUrl)
     next()
 }
 
@@ -52,9 +52,12 @@ const logger = async (req, res, next) => {
 const verifyToken = async (req, res, next) => {
     const token = req.cookies?.token
     console.log('value of token in middleware', token)
+    // no token available
     if (!token) {
         return res.status(401).send({ message: 'not authorized' })
     }
+
+    // jwt verify 
 
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decode) => {
         // err 
@@ -95,21 +98,42 @@ async function run() {
         const bookingCollection = client.db('carDoctor').collection('bookings')
 
 
-        // auth related api 
+        // auth related api module-61 login
 
         app.post('/jwt', logger, async (req, res) => {
             const user = req.body
-            console.log(user)
+            console.log('user for token', user)
             const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '12h' })
 
-            res
-                .cookie('token', token, {
-                    httpOnly: true,
-                    secure: false,
+            res.cookie('token', token, {
+                httpOnly: true,
+                secure: true,
+                sameSite: 'none'
+            }).send({ success: true })
 
-                })
-                .send({ success: true })
         })
+
+        // auth related api module-61 logout
+        app.post('/logout', async (req, res) => {
+            const user = req.body
+            console.log('user logout', user)
+            res.clearCookie('token', { maxAge: 0 }).send({ success: true })
+        })
+
+        // module-60
+        // app.post('/jwt', logger, async (req, res) => {
+        //     const user = req.body
+        //     console.log(user)
+        //     const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '12h' })
+
+        //     res
+        //         .cookie('token', token, {
+        //             httpOnly: true,
+        //             secure: false,
+
+        //         })
+        //         .send({ success: true })
+        // })
 
 
 
@@ -148,7 +172,10 @@ async function run() {
             // console.log('tok tok', req.cookies.token)
 
             console.log('user in the valid token', req.user)
-            if (req.query.email !== req.query.email) {
+            if (req.user.email !== req.query.email) {
+
+                // module-60 
+                // if (req.query.email !== req.query.email) {
                 return res.status(403).send({ message: 'forbidden access' })
             }
 
