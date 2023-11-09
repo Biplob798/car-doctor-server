@@ -12,8 +12,8 @@ const port = process.env.PORT || 5000
 app.use(cors({
     origin: [
         ' https://cars-doctor-2bbf5.web.app',
-        'https://cars-doctor-2bbf5.firebaseapp.com'
-        // 'http://localhost:5174', 'http://localhost:5173'
+        'https://cars-doctor-2bbf5.firebaseapp.com',
+        'http://localhost:5174', 'http://localhost:5173'
     ],
     credentials: true
 
@@ -92,7 +92,7 @@ const verifyToken = async (req, res, next) => {
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
+        // await client.connect();
 
 
 
@@ -142,13 +142,26 @@ async function run() {
 
 
 
-
         // services related api 
 
         // get all data 
 
         app.get('/services', logger, async (req, res) => {
-            const cursor = serviceCollection.find()
+            // sort 
+            const filter = req.query
+            console.log(filter)
+            const query = {
+                // search 
+                title: { $regex: filter.search, $options: 'i' }
+                // sort 
+                // price: { $gt: 10, $lt: 100 }
+            }
+            const options = {
+                sort: {
+                    price: filter.sort === 'asc' ? 1 : -1
+                }
+            }
+            const cursor = serviceCollection.find(query, options)
             const result = await cursor.toArray()
             res.send(result)
         })
@@ -239,7 +252,7 @@ async function run() {
 
 
         // Send a ping to confirm a successful connection
-        await client.db("admin").command({ ping: 1 });
+        // await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
